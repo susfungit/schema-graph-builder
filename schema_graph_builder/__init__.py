@@ -6,8 +6,8 @@ and creating interactive visualizations for PostgreSQL, MySQL, and MS SQL Server
 """
 
 __version__ = "1.0.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "Sushant Prabhu Sawkar"
+__email__ = "sushantsawkar@gmail.com"
 
 # Import main components for easy access  
 from .extractor.schema_extractor import extract_schema
