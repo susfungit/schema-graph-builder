@@ -28,13 +28,13 @@ requirements = [
 setup(
     name="schema-graph-builder",
     version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Sushant Prabhu Sawkar",
+    author_email="sushantsawkar@gmail.com",
     description="Database schema extraction and graph visualization tool",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/schema-graph-builder",
-    packages=find_packages(),
+    url="https://github.com/susfungit/schema-graph-builder",
+    packages=find_packages(exclude=["tests", "tests.*"]) + ["schema_graph_builder.examples"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -69,8 +69,8 @@ setup(
     },
     keywords="database schema graph visualization postgresql mysql mssql",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/schema-graph-builder/issues",
-        "Source": "https://github.com/yourusername/schema-graph-builder",
-        "Documentation": "https://github.com/yourusername/schema-graph-builder#readme",
+        "Bug Reports": "https://github.com/susfungit/schema-graph-builder/issues",
+        "Source": "https://github.com/susfungit/schema-graph-builder",
+        "Documentation": "https://github.com/susfungit/schema-graph-builder#readme",
     },
 ) 

@@ -550,7 +550,7 @@ class TestCrossDatabase:
     
     def test_relationship_inference_consistency(self):
         """Test that relationship inference works consistently across database types"""
-        from inference.relationship_inference import infer_relationships
+        from schema_graph_builder.inference.relationship_inference import infer_relationships
         
         # Same logical schema for different databases
         test_schemas = [

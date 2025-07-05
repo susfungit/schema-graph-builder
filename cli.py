@@ -10,9 +10,9 @@ import argparse
 import sys
 import os
 import yaml
-from extractor.schema_extractor import extract_schema
-from inference.relationship_inference import infer_relationships
-from graph.graph_builder import build_graph
+from schema_graph_builder.extractor.schema_extractor import extract_schema
+from schema_graph_builder.inference.relationship_inference import infer_relationships
+from schema_graph_builder.graph.graph_builder import build_graph
 
 
 def get_database_config(db_type):

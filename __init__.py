@@ -6,14 +6,14 @@ and creating interactive visualizations for PostgreSQL, MySQL, and MS SQL Server
 """
 
 __version__ = "1.0.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "Sushant Prabhu Sawkar"
+__email__ = "sushantsawkar@gmail.com"
 
 # Import main components for easy access
-from extractor.schema_extractor import extract_schema
-from inference.relationship_inference import infer_relationships  
-from graph.graph_builder import build_graph
-from api import SchemaGraphBuilder
+from schema_graph_builder.extractor.schema_extractor import extract_schema
+from schema_graph_builder.inference.relationship_inference import infer_relationships  
+from schema_graph_builder.graph.graph_builder import build_graph
+from schema_graph_builder.api import SchemaGraphBuilder
 
 # Define what gets imported with "from schema_graph_builder import *"
 __all__ = [

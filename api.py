@@ -8,9 +8,9 @@ programmatically without having to deal with individual modules.
 import os
 import yaml
 from typing import Dict, Any, Optional
-from extractor.schema_extractor import extract_schema
-from inference.relationship_inference import infer_relationships
-from graph.graph_builder import build_graph
+from schema_graph_builder.extractor.schema_extractor import extract_schema
+from schema_graph_builder.inference.relationship_inference import infer_relationships
+from schema_graph_builder.graph.graph_builder import build_graph
 
 
 class SchemaGraphBuilder:

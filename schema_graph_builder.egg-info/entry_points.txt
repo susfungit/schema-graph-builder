@@ -1,2 +1,0 @@
-[console_scripts]
-schema-graph-builder = schema_graph_builder.cli:main

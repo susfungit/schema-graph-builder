@@ -1,6 +1,0 @@
-connectors
-extractor
-graph
-inference
-schema_graph_builder
-tests
