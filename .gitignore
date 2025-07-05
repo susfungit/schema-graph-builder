@@ -195,4 +195,7 @@ config.ini
 .env.local
 .env.production
 secrets.yaml
-secrets.yml 
+secrets.yml
+
+# Project-specific documentation
+PRODUCTION_READINESS_REPORT.md 
