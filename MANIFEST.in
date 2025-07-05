@@ -1,0 +1,12 @@
+include README.md
+include requirements.txt
+include *.yml
+include *.yaml
+include *.sql
+include *.html
+recursive-include config *.yaml
+recursive-include examples *.sql *.yaml
+recursive-include output *.json *.yaml
+prune __pycache__
+prune *.pyc
+prune .git* 

@@ -1,0 +1,53 @@
+Metadata-Version: 2.2
+Name: schema-graph-builder
+Version: 1.0.0
+Summary: Database schema extraction and graph visualization tool
+Home-page: https://github.com/yourusername/schema-graph-builder
+Author: Your Name
+Author-email: your.email@example.com
+Project-URL: Bug Reports, https://github.com/yourusername/schema-graph-builder/issues
+Project-URL: Source, https://github.com/yourusername/schema-graph-builder
+Project-URL: Documentation, https://github.com/yourusername/schema-graph-builder#readme
+Keywords: database schema graph visualization postgresql mysql mssql
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Database
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: sqlalchemy>=1.4.0
+Requires-Dist: psycopg2-binary>=2.9.0
+Requires-Dist: pymysql>=1.0.0
+Requires-Dist: pyodbc>=4.0.30
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: networkx>=2.8.0
+Requires-Dist: pyvis>=0.3.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: flake8; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-cov; extra == "test"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: project-url
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+Database Schema Graph Builder - A tool for extracting database schemas and creating interactive visualizations
