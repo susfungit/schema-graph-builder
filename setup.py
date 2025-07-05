@@ -22,6 +22,7 @@ requirements = [
     "PyYAML>=6.0",
     "networkx>=2.8.0",
     "pyvis>=0.3.0",
+    "cryptography>=3.4.0",  # For password encryption
 ]
 
 setup(

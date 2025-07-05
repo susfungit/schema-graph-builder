@@ -60,27 +60,37 @@ class TestDatabaseConfig:
 class TestDisplayRelationships:
     """Tests for relationship display function"""
     
-    def test_display_relationships_basic(self, sample_relationships, capsys):
+    def test_display_relationships_basic(self, capsys):
         """Test basic relationship display"""
-        display_relationships(sample_relationships)
+        relationships = {
+            'orders': {
+                'primary_key': 'order_id',
+                'foreign_keys': [
+                    {'column': 'customer_id', 'references': 'customers.customer_id', 'confidence': 0.9}
+                ]
+            }
+        }
         
+        display_relationships(relationships)
         captured = capsys.readouterr()
-        assert "📋 Inferred Relationships:" in captured.out
-        assert "customers:" in captured.out
-        assert "orders:" in captured.out
-        assert "products:" in captured.out
-        assert "Primary Key: customer_id" in captured.out
-        assert "Foreign Key: customer_id -> customers.customer_id" in captured.out
+        
+        assert "🔗 Inferred Relationships:" in captured.out
+        assert "📋 orders:" in captured.out
+        assert "Primary Key: order_id" in captured.out
+        assert "🟢 customer_id → customers.customer_id" in captured.out
     
     def test_display_relationships_empty(self, capsys):
         """Test display with empty relationships"""
-        display_relationships({})
+        relationships = {}
         
+        display_relationships(relationships)
         captured = capsys.readouterr()
-        assert "📋 Inferred Relationships:" in captured.out
+        
+        assert "🔗 Inferred Relationships:" in captured.out
+        assert "No foreign key relationships detected" in captured.out
     
     def test_display_relationships_no_foreign_keys(self, capsys):
-        """Test display with no foreign keys"""
+        """Test display with tables that have no foreign keys"""
         relationships = {
             'users': {
                 'primary_key': 'user_id',
@@ -89,11 +99,10 @@ class TestDisplayRelationships:
         }
         
         display_relationships(relationships)
-        
         captured = capsys.readouterr()
-        assert "users:" in captured.out
-        assert "Primary Key: user_id" in captured.out
-        assert "Foreign Keys: None" in captured.out
+        
+        assert "🔗 Inferred Relationships:" in captured.out
+        assert "No foreign key relationships detected" in captured.out
 
 
 class TestCLIMain:
@@ -112,7 +121,7 @@ class TestCLIMain:
         mock_infer.return_value = sample_relationships
         
         # Mock command line arguments
-        test_args = ['cli.py', 'postgres']
+        test_args = ['cli.py', 'analyze', 'postgres']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with patch('schema_graph_builder.cli.os.path.dirname') as mock_dirname:
@@ -128,7 +137,7 @@ class TestCLIMain:
         """Test successful MySQL CLI execution"""
         mock_extract.return_value = sample_schema
         
-        test_args = ['cli.py', 'mysql', '--quiet']
+        test_args = ['cli.py', 'analyze', 'mysql', '--quiet']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with patch('schema_graph_builder.cli.infer_relationships') as mock_infer, \
@@ -145,7 +154,7 @@ class TestCLIMain:
     
     def test_main_unsupported_database(self, monkeypatch, capsys):
         """Test CLI with unsupported database type"""
-        test_args = ['cli.py', 'oracle']
+        test_args = ['cli.py', 'analyze', 'oracle']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with pytest.raises(SystemExit) as excinfo:
@@ -160,7 +169,7 @@ class TestCLIMain:
         """Test CLI with custom configuration file"""
         mock_extract.return_value = sample_schema
         
-        test_args = ['cli.py', 'postgres', '--config', 'custom_config.yaml']
+        test_args = ['cli.py', 'analyze', 'postgres', '--config', 'custom_config.yaml']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with patch('schema_graph_builder.cli.infer_relationships') as mock_infer, \
@@ -181,7 +190,7 @@ class TestCLIMain:
         """Test CLI with custom output directory"""
         mock_extract.return_value = sample_schema
         
-        test_args = ['cli.py', 'postgres', '--output', 'custom_output']
+        test_args = ['cli.py', 'analyze', 'postgres', '--output', 'custom_output']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with patch('schema_graph_builder.cli.infer_relationships') as mock_infer, \
@@ -199,7 +208,7 @@ class TestCLIMain:
     
     def test_main_quiet_mode(self, monkeypatch, capsys):
         """Test CLI quiet mode"""
-        test_args = ['cli.py', 'postgres', '--quiet']
+        test_args = ['cli.py', 'analyze', 'postgres', '--quiet']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with patch('schema_graph_builder.cli.extract_schema') as mock_extract, \
@@ -225,7 +234,7 @@ class TestCLIMain:
         """Test CLI exception handling"""
         mock_extract.side_effect = Exception("Database connection failed")
         
-        test_args = ['cli.py', 'postgres']
+        test_args = ['cli.py', 'analyze', 'postgres']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with pytest.raises(SystemExit) as excinfo:
@@ -240,7 +249,7 @@ class TestCLIMain:
         """Test CLI exception handling in quiet mode"""
         mock_extract.side_effect = Exception("Connection error")
         
-        test_args = ['cli.py', 'postgres', '--quiet']
+        test_args = ['cli.py', 'analyze', 'postgres', '--quiet']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with pytest.raises(SystemExit) as excinfo:
@@ -253,20 +262,24 @@ class TestCLIMain:
     
     def test_argument_parser(self):
         """Test argument parser configuration"""
-        with patch('sys.argv', ['cli.py', 'postgres']):
+        with patch('sys.argv', ['cli.py', 'analyze', 'postgres']):
             parser = argparse.ArgumentParser(description='Database Schema Graph Builder')
-            parser.add_argument('database', choices=['postgres', 'mysql', 'mssql'])
-            parser.add_argument('--config', type=str)
-            parser.add_argument('--output', type=str)
-            parser.add_argument('--quiet', action='store_true')
+            subparsers = parser.add_subparsers(dest='command', help='Commands')
+            analyze_parser = subparsers.add_parser('analyze', help='Analyze database schema')
+            analyze_parser.add_argument('database', choices=['postgres', 'mysql', 'mssql'])
+            analyze_parser.add_argument('--config', type=str)
+            analyze_parser.add_argument('--output', type=str)
+            analyze_parser.add_argument('--quiet', action='store_true')
             
-            args = parser.parse_args(['postgres'])
+            args = parser.parse_args(['analyze', 'postgres'])
+            assert args.command == 'analyze'
             assert args.database == 'postgres'
             assert args.config is None
             assert args.output is None
             assert args.quiet is False
             
-            args = parser.parse_args(['mysql', '--config', 'test.yaml', '--quiet'])
+            args = parser.parse_args(['analyze', 'mysql', '--config', 'test.yaml', '--quiet'])
+            assert args.command == 'analyze'
             assert args.database == 'mysql'
             assert args.config == 'test.yaml'
             assert args.quiet is True
@@ -277,23 +290,21 @@ class TestCLIIntegration:
     
     def test_cli_help(self, monkeypatch, capsys):
         """Test CLI help output"""
-        test_args = ['cli.py', '--help']
+        test_args = ['cli.py', 'analyze', '--help']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with pytest.raises(SystemExit) as excinfo:
             main()
         
-        # Help should exit with code 0
         assert excinfo.value.code == 0
         captured = capsys.readouterr()
-        assert "Database Schema Graph Builder" in captured.out
         assert "postgres" in captured.out
         assert "mysql" in captured.out
         assert "mssql" in captured.out
     
     def test_cli_invalid_database_choice(self, monkeypatch, capsys):
         """Test CLI with invalid database choice"""
-        test_args = ['cli.py', 'invalid_db']
+        test_args = ['cli.py', 'analyze', 'invalid_db']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with pytest.raises(SystemExit) as excinfo:
