@@ -67,6 +67,14 @@ def get_database_config(db_type):
             "html_file": "mssql_schema_graph.html",
             "display_name": "MS SQL Server",
             "icon": "🏢"
+        },
+        "oracle": {
+            "config_path": "config/oracle_db_connections.yaml",
+            "output_config": "output/oracle_inferred_relationships.yaml",
+            "output_json": "output/oracle_schema_graph.json",
+            "html_file": "oracle_schema_graph.html",
+            "display_name": "Oracle Database",
+            "icon": "🔶"
         }
     }
     
@@ -103,8 +111,8 @@ def main():
     
     # Main schema analysis command
     analyze_parser = subparsers.add_parser('analyze', help='Analyze database schema')
-    analyze_parser.add_argument('database', choices=['postgres', 'mysql', 'mssql'], 
-                               help='Database type (postgres, mysql, or mssql)')
+    analyze_parser.add_argument('database', choices=['postgres', 'mysql', 'mssql', 'oracle'], 
+                               help='Database type (postgres, mysql, mssql, or oracle)')
     analyze_parser.add_argument('--config', type=str, 
                                help='Custom configuration file path')
     analyze_parser.add_argument('--output', type=str, 
@@ -125,7 +133,7 @@ def main():
     # Configuration validation command
     validate_parser = subparsers.add_parser('validate-config', help='Validate configuration file')
     validate_parser.add_argument('config_file', help='Configuration file to validate')
-    validate_parser.add_argument('db_type', choices=['postgres', 'mysql', 'mssql'],
+    validate_parser.add_argument('db_type', choices=['postgres', 'mysql', 'mssql', 'oracle'],
                                 help='Database type')
     
     # Default to analyze command for backward compatibility
@@ -134,7 +142,7 @@ def main():
         return
     
     # Handle legacy usage (direct database argument)
-    if len(sys.argv) >= 2 and sys.argv[1] in ['postgres', 'mysql', 'mssql']:
+    if len(sys.argv) >= 2 and sys.argv[1] in ['postgres', 'mysql', 'mssql', 'oracle']:
         # Insert 'analyze' command for backward compatibility
         sys.argv.insert(1, 'analyze')
     

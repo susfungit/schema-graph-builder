@@ -5,6 +5,7 @@ Schema extractor module - Main interface for extracting database schemas
 from ..connectors.postgres_connector import get_postgres_schema
 from ..connectors.mysql_connector import get_mysql_schema
 from ..connectors.mssql_connector import get_mssql_schema
+from ..connectors.oracle_connector import get_oracle_schema
 
 
 def extract_schema(db_type: str, config_path: str):
@@ -12,7 +13,7 @@ def extract_schema(db_type: str, config_path: str):
     Extract database schema based on database type.
     
     Args:
-        db_type: Database type ('postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver')
+        db_type: Database type ('postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver', 'oracle')
         config_path: Path to database configuration YAML file
         
     Returns:
@@ -29,5 +30,7 @@ def extract_schema(db_type: str, config_path: str):
         return get_mysql_schema(config_path)
     elif db_type_lower in ['mssql', 'sqlserver']:
         return get_mssql_schema(config_path)
+    elif db_type_lower == 'oracle':
+        return get_oracle_schema(config_path)
     else:
         raise ValueError(f"Unsupported database type: '{db_type}'") 

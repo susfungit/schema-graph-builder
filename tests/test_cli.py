@@ -51,9 +51,21 @@ class TestDatabaseConfig:
         
         assert config_lower == config_upper == config_mixed
     
+    def test_get_database_config_oracle(self):
+        """Test Oracle database configuration"""
+        config = get_database_config('oracle')
+        
+        assert config is not None
+        assert config['display_name'] == 'Oracle Database'
+        assert config['icon'] == '🔶'
+        assert config['config_path'] == 'config/oracle_db_connections.yaml'
+        assert config['output_config'] == 'output/oracle_inferred_relationships.yaml'
+        assert config['output_json'] == 'output/oracle_schema_graph.json'
+        assert config['html_file'] == 'oracle_schema_graph.html'
+    
     def test_get_database_config_invalid(self):
         """Test invalid database type"""
-        config = get_database_config('oracle')
+        config = get_database_config('nosql')
         assert config is None
 
 
@@ -152,9 +164,29 @@ class TestCLIMain:
             
             mock_extract.assert_called_once()
     
+    @patch('schema_graph_builder.cli.extract_schema')
+    def test_main_oracle_success(self, mock_extract, sample_schema, monkeypatch):
+        """Test successful Oracle CLI execution"""
+        mock_extract.return_value = sample_schema
+        
+        test_args = ['cli.py', 'analyze', 'oracle', '--quiet']
+        monkeypatch.setattr(sys, 'argv', test_args)
+        
+        with patch('schema_graph_builder.cli.infer_relationships') as mock_infer, \
+             patch('schema_graph_builder.cli.build_graph') as mock_build_graph, \
+             patch('schema_graph_builder.cli.yaml.dump'), \
+             patch('schema_graph_builder.cli.os.makedirs'), \
+             patch('builtins.open'), \
+             patch('schema_graph_builder.cli.os.path.dirname', return_value='output'):
+            
+            mock_infer.return_value = {}
+            main()
+            
+            mock_extract.assert_called_once()
+    
     def test_main_unsupported_database(self, monkeypatch, capsys):
         """Test CLI with unsupported database type"""
-        test_args = ['cli.py', 'analyze', 'oracle']
+        test_args = ['cli.py', 'analyze', 'nosql']
         monkeypatch.setattr(sys, 'argv', test_args)
         
         with pytest.raises(SystemExit) as excinfo:
@@ -162,7 +194,7 @@ class TestCLIMain:
         
         assert excinfo.value.code == 2  # argparse exits with code 2 for invalid choices
         captured = capsys.readouterr()
-        assert "invalid choice: 'oracle'" in captured.err
+        assert "invalid choice: 'nosql'" in captured.err
     
     @patch('schema_graph_builder.cli.extract_schema')
     def test_main_with_custom_config(self, mock_extract, sample_schema, monkeypatch):
