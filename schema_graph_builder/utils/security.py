@@ -186,6 +186,20 @@ class ConnectionSecurity:
             trust_cert = kwargs.get('trust_server_certificate', 'yes')
             return (f"mssql+pyodbc://{username}:{password}@{host}:{port}/{database}"
                    f"?driver={driver}&TrustServerCertificate={trust_cert}")
+        elif db_type.lower() == 'oracle':
+            # Oracle supports both service_name and sid connection methods
+            service_name = kwargs.get('service_name')
+            sid = kwargs.get('sid')
+            
+            if service_name:
+                # Use service_name format (recommended for Oracle 12c+)
+                return f"oracle+cx_oracle://{username}:{password}@{host}:{port}/?service_name={service_name}"
+            elif sid:
+                # Use SID format (legacy Oracle)
+                return f"oracle+cx_oracle://{username}:{password}@{host}:{port}/{sid}"
+            else:
+                # This should not happen due to validation in oracle_connector.py
+                raise ValueError("Oracle connection requires either 'service_name' or 'sid'")
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
     

@@ -1,0 +1,15 @@
+# Production dependencies for Schema Graph Builder
+# Database connectivity
+sqlalchemy>=1.4.0
+psycopg2-binary>=2.9.0
+pymysql>=1.0.0
+pyodbc>=4.0.30
+cx_Oracle>=8.3.0
+
+# Data processing and visualization
+PyYAML>=6.0
+networkx>=2.8.0
+pyvis>=0.3.0
+
+# Security
+cryptography>=3.4.0 

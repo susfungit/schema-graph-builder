@@ -7,6 +7,7 @@ from ..connectors.base_connector import DatabaseConnector
 from ..connectors.postgres_connector import PostgreSQLConnector
 from ..connectors.mysql_connector import MySQLConnector
 from ..connectors.mssql_connector import MSSQLConnector
+from ..connectors.oracle_connector import OracleConnector
 
 
 # Registry of database types to connector classes
@@ -16,6 +17,7 @@ DATABASE_CONNECTORS = {
     'mysql': MySQLConnector,
     'mssql': MSSQLConnector,
     'sqlserver': MSSQLConnector,
+    'oracle': OracleConnector,
 }
 
 
@@ -24,7 +26,7 @@ def extract_schema(db_type: str, config_path: str) -> Dict[str, Any]:
     Extract database schema based on database type using the connector abstraction.
     
     Args:
-        db_type: Database type ('postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver')
+        db_type: Database type ('postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver', 'oracle')
         config_path: Path to database configuration YAML file
         
     Returns:
@@ -71,4 +73,4 @@ def register_database_connector(db_type: str, connector_class: type) -> None:
     if not issubclass(connector_class, DatabaseConnector):
         raise ValueError("connector_class must be a subclass of DatabaseConnector")
     
-    DATABASE_CONNECTORS[db_type.lower()] = connector_class 
+    DATABASE_CONNECTORS[db_type.lower()] = connector_class

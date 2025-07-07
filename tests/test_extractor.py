@@ -77,10 +77,23 @@ class TestSchemaExtractor:
         mock_connector.extract_schema.assert_called_once_with(temp_config_file)
         assert result == sample_schema
     
+    @patch('schema_graph_builder.extractor.schema_extractor.OracleConnector')
+    def test_extract_schema_oracle(self, mock_oracle_class, sample_schema, temp_config_file):
+        """Test schema extraction for Oracle"""
+        mock_connector = Mock()
+        mock_oracle_class.return_value = mock_connector
+        mock_connector.extract_schema.return_value = sample_schema
+        
+        result = extract_schema('oracle', temp_config_file)
+        
+        mock_oracle_class.assert_called_once()
+        mock_connector.extract_schema.assert_called_once_with(temp_config_file)
+        assert result == sample_schema
+    
     def test_extract_schema_unsupported_db_type(self, temp_config_file):
         """Test schema extraction with unsupported database type"""
-        with pytest.raises(ValueError, match="Unsupported database type: 'oracle'. Supported types:"):
-            extract_schema('oracle', temp_config_file)
+        with pytest.raises(ValueError, match="Unsupported database type: 'nosql'"):
+            extract_schema('nosql', temp_config_file)
     
     @patch('schema_graph_builder.extractor.schema_extractor.PostgreSQLConnector')
     def test_extract_schema_case_insensitive(self, mock_postgres_class, temp_config_file):
@@ -109,8 +122,8 @@ class TestSchemaExtractor:
         # Use the new get_supported_database_types function
         supported_types = get_supported_database_types()
         
-        # Ensure we have the expected types
-        expected_types = ['postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver']
+        # Ensure we have the expected types including Oracle
+        expected_types = ['postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver', 'oracle']
         for db_type in expected_types:
             assert db_type in supported_types, f"Database type '{db_type}' should be supported"
     
