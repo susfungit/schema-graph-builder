@@ -19,6 +19,7 @@ requirements = [
     "psycopg2-binary>=2.9.0",
     "pymysql>=1.0.0",
     "pyodbc>=4.0.30",
+    "cx_Oracle>=8.3.0",
     "PyYAML>=6.0",
     "networkx>=2.8.0",
     "pyvis>=0.3.0",
@@ -67,7 +68,7 @@ setup(
             "examples/*.yaml",
         ],
     },
-    keywords="database schema graph visualization postgresql mysql mssql",
+    keywords="database schema graph visualization postgresql mysql mssql oracle",
     project_urls={
         "Bug Reports": "https://github.com/susfungit/schema-graph-builder/issues",
         "Source": "https://github.com/susfungit/schema-graph-builder",

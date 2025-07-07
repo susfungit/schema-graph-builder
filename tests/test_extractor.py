@@ -62,10 +62,20 @@ class TestSchemaExtractor:
         mock_get_mssql.assert_called_once_with(temp_config_file)
         assert result == sample_schema
     
+    @patch('schema_graph_builder.extractor.schema_extractor.get_oracle_schema')
+    def test_extract_schema_oracle(self, mock_get_oracle, sample_schema, temp_config_file):
+        """Test schema extraction for Oracle"""
+        mock_get_oracle.return_value = sample_schema
+        
+        result = extract_schema('oracle', temp_config_file)
+        
+        mock_get_oracle.assert_called_once_with(temp_config_file)
+        assert result == sample_schema
+    
     def test_extract_schema_unsupported_db_type(self, temp_config_file):
         """Test schema extraction with unsupported database type"""
-        with pytest.raises(ValueError, match="Unsupported database type: 'oracle'"):
-            extract_schema('oracle', temp_config_file)
+        with pytest.raises(ValueError, match="Unsupported database type: 'nosql'"):
+            extract_schema('nosql', temp_config_file)
     
     def test_extract_schema_case_insensitive(self, temp_config_file):
         """Test that database type matching is case insensitive"""
@@ -88,7 +98,7 @@ class TestSchemaExtractor:
     def test_extract_schema_supported_databases_list(self):
         """Test that the function supports all expected database types"""
         # This test ensures we don't accidentally remove support for any database
-        supported_types = ['postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver']
+        supported_types = ['postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver', 'oracle']
         
         for db_type in supported_types:
             # Map database type to correct function name
@@ -98,6 +108,8 @@ class TestSchemaExtractor:
                 func_name = 'get_mysql_schema'
             elif db_type.lower() in ['mssql', 'sqlserver']:
                 func_name = 'get_mssql_schema'
+            elif db_type.lower() == 'oracle':
+                func_name = 'get_oracle_schema'
             else:
                 func_name = f'get_{db_type}_schema'
                 

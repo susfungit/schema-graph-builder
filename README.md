@@ -6,13 +6,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen.svg)](tests/)
 
-A powerful Python tool that automatically extracts database schemas, infers relationships between tables, and creates beautiful interactive visualizations. Supports PostgreSQL, MySQL, and Microsoft SQL Server.
+A powerful Python tool that automatically extracts database schemas, infers relationships between tables, and creates beautiful interactive visualizations. Supports PostgreSQL, MySQL, Microsoft SQL Server, and Oracle Database.
 
 ![Schema Graph Example](docs/images/schema-graph-preview.png)
 
 ## ✨ Features
 
-- 🎯 **Multi-Database Support** - PostgreSQL, MySQL, MS SQL Server
+- 🎯 **Multi-Database Support** - PostgreSQL, MySQL, MS SQL Server, Oracle Database
 - 🔍 **Automatic Relationship Detection** - Infers foreign key relationships using column name patterns
 - 🎨 **Interactive Visualizations** - Beautiful HTML graphs with hover details and zoom
 - 📊 **Multiple Output Formats** - YAML, JSON, HTML
@@ -43,6 +43,9 @@ pip install -e .
 # Analyze a PostgreSQL database
 schema-graph-builder postgres
 
+# Analyze an Oracle database
+schema-graph-builder oracle
+
 # Analyze with custom configuration
 schema-graph-builder postgres --config my-db-config.yaml --output results/
 
@@ -60,8 +63,8 @@ builder = SchemaGraphBuilder()
 
 # Analyze database and get results
 result = builder.analyze_database(
-    db_type="postgres",
-    config_path="config/db_connections.yaml"
+    db_type="oracle",  # or "postgres", "mysql", "mssql"
+    config_path="config/oracle_db_connections.yaml"
 )
 
 # Access extracted data
@@ -76,6 +79,7 @@ print(f"Detected {sum(len(rel['foreign_keys']) for rel in result['relationships'
   - PostgreSQL: `psycopg2-binary`
   - MySQL: `pymysql`
   - SQL Server: `pyodbc`
+  - Oracle: `cx_Oracle`
 
 ## 🔧 Configuration
 
@@ -112,6 +116,19 @@ password: your_password
 driver: "ODBC Driver 17 for SQL Server"
 ```
 
+### Oracle Example
+```yaml
+# config/oracle_db_connections.yaml
+host: localhost
+port: 1521
+service_name: XEPDB1    # Use service_name for Oracle 12c+
+username: your_username
+password: your_password
+
+# Or use SID for legacy Oracle installations
+# sid: XE
+```
+
 ## 📚 Detailed Usage
 
 ### Python API Examples
@@ -120,7 +137,7 @@ driver: "ODBC Driver 17 for SQL Server"
 ```python
 from schema_graph_builder import extract_schema
 
-schema = extract_schema("postgres", "config/db_connections.yaml")
+schema = extract_schema("oracle", "config/oracle_db_connections.yaml")
 print(f"Database: {schema['database']}")
 for table in schema['tables']:
     print(f"  Table: {table['name']} ({len(table['columns'])} columns)")
@@ -155,17 +172,17 @@ builder = SchemaGraphBuilder()
 
 # Complete analysis with all outputs
 result = builder.analyze_database(
-    db_type="postgres",
-    config_path="config/db_connections.yaml",
+    db_type="oracle",
+    config_path="config/oracle_db_connections.yaml",
     output_dir="output",
     visualize=True,
     save_files=True
 )
 
 # Files created:
-# - output/postgres_inferred_relationships.yaml
-# - output/postgres_schema_graph.json  
-# - postgres_schema_graph.html
+# - output/oracle_inferred_relationships.yaml
+# - output/oracle_schema_graph.json  
+# - oracle_schema_graph.html
 ```
 
 ### CLI Examples
@@ -183,6 +200,7 @@ schema-graph-builder mysql \
 schema-graph-builder postgres --config prod-postgres.yaml
 schema-graph-builder mysql --config prod-mysql.yaml
 schema-graph-builder mssql --config prod-mssql.yaml
+schema-graph-builder oracle --config prod-oracle.yaml
 
 # Automated/scripted usage
 schema-graph-builder postgres --quiet && echo "Analysis complete"
@@ -282,6 +300,7 @@ pytest tests/test_integration.py -v
 # Test specific database types
 pytest tests/ -k "postgres" -v
 pytest tests/ -k "mysql" -v
+pytest tests/ -k "oracle" -v
 ```
 
 ## 🤝 Contributing
