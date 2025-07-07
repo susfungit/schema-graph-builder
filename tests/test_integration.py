@@ -259,20 +259,30 @@ class TestFullPipeline:
 class TestErrorRecovery:
     """Test error recovery and graceful degradation"""
     
-    @patch('schema_graph_builder.extractor.schema_extractor.PostgreSQLConnector')
-    def test_schema_extraction_failure_recovery(self, mock_postgres_class):
+    def test_schema_extraction_failure_recovery(self):
         """Test recovery from schema extraction failures"""
         from schema_graph_builder.api import SchemaGraphBuilder
+        import tempfile
+        import yaml
+        import os
         
-        # Mock extraction failure
-        mock_connector = Mock()
-        mock_postgres_class.return_value = mock_connector
-        mock_connector.extract_schema.side_effect = Exception("Connection timeout")
+        # Create a temporary config file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump({'host': 'localhost', 'database': 'testdb', 'username': 'test', 'password': 'test'}, f)
+            config_file = f.name
         
-        builder = SchemaGraphBuilder()
-        
-        with pytest.raises(Exception, match="Connection timeout"):
-            builder.extract_schema_only('postgres', 'dummy_config.yaml')
+        try:
+            builder = SchemaGraphBuilder()
+            
+            # Mock the base connector methods to simulate connection timeout
+            with patch('schema_graph_builder.connectors.base_connector.DatabaseConnector._create_connection'), \
+                 patch('schema_graph_builder.connectors.base_connector.DatabaseConnector._extract_schema_data', side_effect=Exception("Connection timeout")):
+                
+                with pytest.raises(Exception, match="Connection timeout"):
+                    builder.extract_schema_only('postgres', config_file)
+        finally:
+            if os.path.exists(config_file):
+                os.unlink(config_file)
     
     @patch('schema_graph_builder.api.build_graph')
     @patch('schema_graph_builder.api.yaml.dump')
