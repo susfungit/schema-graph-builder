@@ -259,13 +259,15 @@ class TestFullPipeline:
 class TestErrorRecovery:
     """Test error recovery and graceful degradation"""
     
-    @patch('schema_graph_builder.extractor.schema_extractor.get_postgres_schema')
-    def test_schema_extraction_failure_recovery(self, mock_get_schema):
+    @patch('schema_graph_builder.extractor.schema_extractor.PostgreSQLConnector')
+    def test_schema_extraction_failure_recovery(self, mock_postgres_class):
         """Test recovery from schema extraction failures"""
         from schema_graph_builder.api import SchemaGraphBuilder
         
         # Mock extraction failure
-        mock_get_schema.side_effect = Exception("Connection timeout")
+        mock_connector = Mock()
+        mock_postgres_class.return_value = mock_connector
+        mock_connector.extract_schema.side_effect = Exception("Connection timeout")
         
         builder = SchemaGraphBuilder()
         

@@ -15,8 +15,8 @@ from schema_graph_builder.connectors.mssql_connector import get_mssql_schema
 class TestPostgresConnector:
     """Tests for PostgreSQL connector"""
     
-    @patch('schema_graph_builder.connectors.postgres_connector.create_engine')
-    @patch('schema_graph_builder.connectors.postgres_connector.inspect')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
     def test_get_postgres_schema_success(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
         """Test successful PostgreSQL schema extraction"""
         mock_engine, mock_inspector = mock_sqlalchemy_engine
@@ -38,7 +38,7 @@ class TestPostgresConnector:
         assert any(table['name'] == 'orders' for table in result['tables'])
         assert any(table['name'] == 'products' for table in result['tables'])
     
-    @patch('schema_graph_builder.connectors.postgres_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
     def test_get_postgres_schema_connection_error(self, mock_create_engine, temp_config_file):
         """Test PostgreSQL connection error handling"""
         mock_create_engine.side_effect = Exception("Connection failed")
@@ -51,8 +51,8 @@ class TestPostgresConnector:
         with pytest.raises(FileNotFoundError):
             get_postgres_schema("nonexistent_config.yaml")
     
-    @patch('schema_graph_builder.connectors.postgres_connector.create_engine')
-    @patch('schema_graph_builder.connectors.postgres_connector.inspect')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
     def test_get_postgres_schema_empty_database(self, mock_inspect, mock_create_engine, temp_config_file):
         """Test PostgreSQL with empty database"""
         mock_engine = Mock()
@@ -71,8 +71,8 @@ class TestPostgresConnector:
 class TestMySQLConnector:
     """Tests for MySQL connector"""
     
-    @patch('schema_graph_builder.connectors.mysql_connector.create_engine')
-    @patch('schema_graph_builder.connectors.mysql_connector.inspect')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
     def test_get_mysql_schema_success(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
         """Test successful MySQL schema extraction"""
         mock_engine, mock_inspector = mock_sqlalchemy_engine
@@ -92,7 +92,7 @@ class TestMySQLConnector:
         assert len(result['tables']) == 3
         assert any(table['name'] == 'customers' for table in result['tables'])
     
-    @patch('schema_graph_builder.connectors.mysql_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
     def test_get_mysql_schema_connection_error(self, mock_create_engine, temp_config_file):
         """Test MySQL connection error handling"""
         mock_create_engine.side_effect = Exception("MySQL connection failed")
@@ -104,8 +104,8 @@ class TestMySQLConnector:
 class TestMSSQLConnector:
     """Tests for MS SQL Server connector"""
     
-    @patch('schema_graph_builder.connectors.mssql_connector.create_engine')
-    @patch('schema_graph_builder.connectors.mssql_connector.inspect')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
     def test_get_mssql_schema_success(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
         """Test successful MS SQL Server schema extraction"""
         mock_engine, mock_inspector = mock_sqlalchemy_engine
@@ -125,7 +125,7 @@ class TestMSSQLConnector:
         assert len(result['tables']) == 3
         assert any(table['name'] == 'customers' for table in result['tables'])
     
-    @patch('schema_graph_builder.connectors.mssql_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
     def test_get_mssql_schema_connection_error(self, mock_create_engine, temp_config_file):
         """Test MS SQL Server connection error handling"""
         mock_create_engine.side_effect = Exception("MSSQL connection failed")
@@ -141,12 +141,8 @@ class TestConnectorIntegration:
         """Test that all connectors return consistent schema format"""
         mock_engine, mock_inspector = mock_sqlalchemy_engine
         
-        with patch('schema_graph_builder.connectors.postgres_connector.create_engine', return_value=mock_engine), \
-             patch('schema_graph_builder.connectors.postgres_connector.inspect', return_value=mock_inspector), \
-             patch('schema_graph_builder.connectors.mysql_connector.create_engine', return_value=mock_engine), \
-             patch('schema_graph_builder.connectors.mysql_connector.inspect', return_value=mock_inspector), \
-             patch('schema_graph_builder.connectors.mssql_connector.create_engine', return_value=mock_engine), \
-             patch('schema_graph_builder.connectors.mssql_connector.inspect', return_value=mock_inspector):
+        with patch('schema_graph_builder.connectors.base_connector.create_engine', return_value=mock_engine), \
+             patch('schema_graph_builder.connectors.base_connector.inspect', return_value=mock_inspector):
             
             # Mock column types for different databases
             for table in ['customers', 'orders', 'products']:

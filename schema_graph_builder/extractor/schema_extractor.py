@@ -2,14 +2,26 @@
 Schema extractor module - Main interface for extracting database schemas
 """
 
-from ..connectors.postgres_connector import get_postgres_schema
-from ..connectors.mysql_connector import get_mysql_schema
-from ..connectors.mssql_connector import get_mssql_schema
+from typing import Dict, Any
+from ..connectors.base_connector import DatabaseConnector
+from ..connectors.postgres_connector import PostgreSQLConnector
+from ..connectors.mysql_connector import MySQLConnector
+from ..connectors.mssql_connector import MSSQLConnector
 
 
-def extract_schema(db_type: str, config_path: str):
+# Registry of database types to connector classes
+DATABASE_CONNECTORS = {
+    'postgres': PostgreSQLConnector,
+    'postgresql': PostgreSQLConnector,
+    'mysql': MySQLConnector,
+    'mssql': MSSQLConnector,
+    'sqlserver': MSSQLConnector,
+}
+
+
+def extract_schema(db_type: str, config_path: str) -> Dict[str, Any]:
     """
-    Extract database schema based on database type.
+    Extract database schema based on database type using the connector abstraction.
     
     Args:
         db_type: Database type ('postgres', 'postgresql', 'mysql', 'mssql', 'sqlserver')
@@ -23,11 +35,40 @@ def extract_schema(db_type: str, config_path: str):
     """
     db_type_lower = db_type.lower()
     
-    if db_type_lower in ['postgres', 'postgresql']:
-        return get_postgres_schema(config_path)
-    elif db_type_lower == 'mysql':
-        return get_mysql_schema(config_path)
-    elif db_type_lower in ['mssql', 'sqlserver']:
-        return get_mssql_schema(config_path)
-    else:
-        raise ValueError(f"Unsupported database type: '{db_type}'") 
+    if db_type_lower not in DATABASE_CONNECTORS:
+        supported_types = ', '.join(DATABASE_CONNECTORS.keys())
+        raise ValueError(f"Unsupported database type: '{db_type}'. Supported types: {supported_types}")
+    
+    # Get the connector class and create an instance
+    connector_class = DATABASE_CONNECTORS[db_type_lower]
+    connector = connector_class()
+    
+    # Extract the schema using the connector
+    return connector.extract_schema(config_path)
+
+
+def get_supported_database_types() -> list:
+    """
+    Get list of supported database types.
+    
+    Returns:
+        List of supported database type strings
+    """
+    return list(DATABASE_CONNECTORS.keys())
+
+
+def register_database_connector(db_type: str, connector_class: type) -> None:
+    """
+    Register a new database connector type.
+    
+    Args:
+        db_type: Database type identifier
+        connector_class: DatabaseConnector subclass
+        
+    Raises:
+        ValueError: If connector_class is not a DatabaseConnector subclass
+    """
+    if not issubclass(connector_class, DatabaseConnector):
+        raise ValueError("connector_class must be a subclass of DatabaseConnector")
+    
+    DATABASE_CONNECTORS[db_type.lower()] = connector_class 
