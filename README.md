@@ -32,6 +32,11 @@ pip install schema-graph-builder
 # Or install from source
 git clone https://github.com/yourusername/schema-graph-builder
 cd schema-graph-builder
+
+# Option 1: Install via requirements.txt
+pip install -r requirements.txt
+
+# Option 2: Install in development mode
 pip install -e .
 ```
 

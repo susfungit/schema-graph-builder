@@ -1,10 +1,11 @@
 # Makefile for Schema Graph Builder
 
-.PHONY: help install install-dev test test-unit test-integration test-performance test-coverage clean lint format type-check docs build publish
+.PHONY: help install install-req install-dev test test-unit test-integration test-performance test-coverage clean lint format type-check docs build publish
 
 help:
 	@echo "Available commands:"
-	@echo "  install         Install production dependencies"
+	@echo "  install         Install production dependencies (via setup.py)"
+	@echo "  install-req     Install production dependencies (via requirements.txt)"
 	@echo "  install-dev     Install development dependencies"
 	@echo "  test           Run all tests"
 	@echo "  test-unit      Run unit tests only"
@@ -20,6 +21,9 @@ help:
 
 install:
 	pip install -e .
+
+install-req:
+	pip install -r requirements.txt
 
 install-dev:
 	pip install -e .

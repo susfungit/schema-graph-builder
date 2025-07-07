@@ -51,6 +51,11 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Benchmark results
+.benchmarks/
+benchmark-results/
+*.benchmark
+
 # Translations
 *.mo
 *.pot
@@ -189,6 +194,8 @@ Desktop.ini
 # Log files
 *.log
 logs/
+audit.log
+*.audit
 
 # Configuration files with sensitive data
 config.ini
@@ -197,5 +204,21 @@ config.ini
 secrets.yaml
 secrets.yml
 
-# Project-specific documentation
-PRODUCTION_READINESS_REPORT.md 
+# Oracle-specific files
+tnsnames.ora
+sqlnet.ora
+*.wallet
+*.p12
+*.jks
+orapki.log
+instant_client/
+oracle_client/
+
+# Database connection files (with credentials)
+*_db_connections.yaml
+*_db_connections.yml
+prod-*.yaml
+prod-*.yml
+
+# Project-specific documentation (generated/temporary)
+PRODUCTION_READINESS_REPORT.md
