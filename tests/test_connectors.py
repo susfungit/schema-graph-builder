@@ -13,6 +13,7 @@ from schema_graph_builder.connectors.mssql_connector import get_mssql_schema
 from schema_graph_builder.connectors.oracle_connector import get_oracle_schema
 from schema_graph_builder.connectors.redshift_connector import get_redshift_schema
 from schema_graph_builder.connectors.sybase_connector import get_sybase_schema
+from schema_graph_builder.connectors.db2_connector import get_db2_schema
 
 
 class TestPostgresConnector:
@@ -1313,14 +1314,512 @@ class TestConnectorIntegrationWithSybase:
                     col['type'] = Mock()
                     col['type'].__str__ = Mock(return_value='INTEGER' if 'id' in col['name'] else 'VARCHAR(100)')
             
+                         # Test all database connectors
+            postgres_result = get_postgres_schema(temp_config_file)
+            mysql_result = get_mysql_schema(temp_config_file)
+            mssql_result = get_mssql_schema(temp_config_file)
+            sybase_result = get_sybase_schema(temp_config_file)
+            db2_result = get_db2_schema(temp_config_file)
+            
+            # All results should have consistent structure
+            for result in [postgres_result, mysql_result, mssql_result, sybase_result, db2_result]:
+                assert 'database' in result
+                assert 'tables' in result
+                assert isinstance(result['tables'], list)
+                
+                # Each table should have consistent structure
+                for table in result['tables']:
+                    assert 'name' in table
+                    assert 'columns' in table
+                    assert isinstance(table['columns'], list)
+                    
+                    # Each column should have consistent structure
+                    for column in table['columns']:
+                        assert 'name' in column
+                        assert 'type' in column
+                        assert 'nullable' in column
+                        assert 'primary_key' in column
+
+
+class TestDB2Connector:
+    """Tests for IBM DB2 connector"""
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_success(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
+        """Test successful DB2 schema extraction with enterprise features"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock DB2-specific metadata query
+        mock_connection = Mock()
+        
+        # Mock DB2 system catalog query results
+        mock_metadata_result = Mock()
+        mock_metadata_result.__iter__ = Mock(return_value=iter([
+            # customers table with identity column
+            ('MYSCHEMA', 'CUSTOMERS', 'CUSTOMER_ID', 'INTEGER', 4, 0, 'N', None, 'Y', 'N', 'USERSPACE1', 1000, 25, 20),
+            ('MYSCHEMA', 'CUSTOMERS', 'NAME', 'VARCHAR', 100, 0, 'Y', None, 'N', 'N', 'USERSPACE1', 1000, 25, 20),
+            ('MYSCHEMA', 'CUSTOMERS', 'EMAIL', 'VARCHAR', 255, 0, 'Y', None, 'N', 'N', 'USERSPACE1', 1000, 25, 20),
+            # orders table with generated column
+            ('MYSCHEMA', 'ORDERS', 'ORDER_ID', 'INTEGER', 4, 0, 'N', None, 'Y', 'N', 'USERSPACE1', 500, 15, 12),
+            ('MYSCHEMA', 'ORDERS', 'CUSTOMER_ID', 'INTEGER', 4, 0, 'N', None, 'N', 'N', 'USERSPACE1', 500, 15, 12),
+            ('MYSCHEMA', 'ORDERS', 'TOTAL_AMOUNT', 'DECIMAL', 10, 2, 'Y', None, 'N', 'A', 'USERSPACE1', 500, 15, 12),  # Generated column
+        ]))
+        
+        # Mock DB2 version query
+        mock_version_result = Mock()
+        mock_version_result.fetchone.return_value = ('DB2 v11.5.0.0', '5')
+        
+        # Mock server info query
+        mock_server_info_result = Mock()
+        mock_server_info_result.fetchone.return_value = ('DB2SERVER', 'EST', '2024-01-15', '14:30:00')
+        
+        # Mock tablespaces query
+        mock_tablespaces_result = Mock()
+        mock_tablespaces_result.__iter__ = Mock(return_value=iter([
+            ('SYSCATSPACE', 'DMS', 'REGULAR', 4096, 1000, 950, 200),  # System catalog
+            ('USERSPACE1', 'DMS', 'REGULAR', 8192, 5000, 4500, 3000),  # User data
+            ('TEMPSPACE1', 'SMS', 'SYSTEMP', 4096, 2000, 2000, 500),  # Temporary
+            ('IBMDEFAULTBP', 'DMS', 'REGULAR', 4096, 1000, 900, 100),  # Default buffer pool
+        ]))
+        
+        # Mock schemas query
+        mock_schemas_result = Mock()
+        mock_schemas_result.__iter__ = Mock(return_value=iter([
+            ('MYSCHEMA', 'DB2ADMIN', 'DB2ADMIN', '2024-01-01 10:00:00'),
+            ('TESTSCHEMA', 'TESTUSER', 'TESTUSER', '2024-01-02 11:00:00'),
+        ]))
+        
+        def mock_execute(query):
+            # Handle both string and TextClause objects
+            query_str = str(query)
+            if 'syscat.tables' in query_str and 'syscat.columns' in query_str:
+                return mock_metadata_result
+            elif 'env_get_inst_info' in query_str:
+                return mock_version_result
+            elif 'current server' in query_str:
+                return mock_server_info_result
+            elif 'syscat.tablespaces' in query_str:
+                return mock_tablespaces_result
+            elif 'syscat.schemata' in query_str:
+                return mock_schemas_result
+            else:
+                # Return empty result for any other query
+                empty_result = Mock()
+                empty_result.__iter__ = Mock(return_value=iter([]))
+                empty_result.fetchone.return_value = None
+                return empty_result
+        
+        mock_connection.execute.side_effect = mock_execute
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Mock column types for DB2
+        for table in ['customers', 'orders', 'products']:
+            columns = mock_inspector.get_columns(table)
+            for col in columns:
+                col['type'] = Mock()
+                col['type'].__str__ = Mock(return_value='INTEGER' if 'id' in col['name'] else 'VARCHAR(100)')
+        
+        result = get_db2_schema(temp_config_file)
+        
+        assert result['database'] == 'testdb'
+        assert len(result['tables']) == 3
+        assert any(table['name'] == 'customers' for table in result['tables'])
+        assert any(table['name'] == 'orders' for table in result['tables'])
+        assert any(table['name'] == 'products' for table in result['tables'])
+        
+        # Check DB2-specific metadata
+        customers_table = next(table for table in result['tables'] if table['name'] == 'customers')
+        assert 'db2_metadata' in customers_table
+        
+        db2_meta = customers_table['db2_metadata']
+        assert db2_meta['database_engine'] == 'db2'
+        assert db2_meta['schema'] == 'MYSCHEMA'
+        assert db2_meta['tablespace'] == 'USERSPACE1'
+        assert db2_meta['has_identity_columns'] is True
+        assert 'identity_columns' in db2_meta
+        assert 'CUSTOMER_ID' in db2_meta['identity_columns']
+        
+        # Check DB2 server information
+        assert 'server_version' in result
+        assert 'DB2 v11.5.0.0 FixPack 5' in result['server_version']
+        assert 'server_info' in result
+        assert result['server_info']['server_name'] == 'DB2SERVER'
+        assert 'tablespaces' in result
+        assert len(result['tablespaces']) == 4
+        assert 'schemas' in result
+        assert len(result['schemas']) == 2
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    def test_get_db2_schema_connection_error(self, mock_create_engine, temp_config_file):
+        """Test DB2 connection error handling"""
+        mock_create_engine.side_effect = Exception("DB2 connection failed")
+        
+        with pytest.raises(Exception, match="DB2 connection failed"):
+            get_db2_schema(temp_config_file)
+    
+    def test_get_db2_schema_invalid_config(self):
+        """Test DB2 with invalid config file"""
+        with pytest.raises(FileNotFoundError):
+            get_db2_schema("nonexistent_config.yaml")
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_empty_database(self, mock_inspect, mock_create_engine, temp_config_file):
+        """Test DB2 with empty database"""
+        mock_engine = Mock()
+        mock_inspector = Mock()
+        mock_inspector.get_table_names.return_value = []
+        
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock empty DB2 metadata query
+        mock_connection = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([]))
+        mock_connection.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        result = get_db2_schema(temp_config_file)
+        
+        assert result['database'] == 'testdb'
+        assert len(result['tables']) == 0
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_with_ssl(self, mock_inspect, mock_create_engine, mock_sqlalchemy_engine):
+        """Test DB2 SSL connection with enterprise parameters"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock DB2 metadata query
+        mock_connection = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([]))
+        mock_connection.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Create config with DB2 SSL settings  
+        config = {
+            'host': 'db2-enterprise.company.com',
+            'port': 446,  # SSL port
+            'database': 'PRODDB',
+            'username': 'db2admin',
+            'password': 'secure_password',
+            'protocol': 'TCPIP',
+            'security': 'SSL',
+            'authentication': 'SERVER',
+            'current_schema': 'PRODUCTION',
+            'connect_timeout': 60,
+            'application_name': 'schema-analyzer'
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(config, f)
+            config_file = f.name
+        
+        try:
+            result = get_db2_schema(config_file)
+            
+            # Verify DB2 SSL connection parameters were used
+            call_args = mock_create_engine.call_args
+            
+            # Check that DB2 parameters were set
+            assert 'ibm_db_sa' in call_args[0][0]  # Connection string
+            assert 'protocol=TCPIP' in call_args[0][0]
+            assert 'security=SSL' in call_args[0][0]
+            assert 'currentschema=PRODUCTION' in call_args[0][0]
+            
+            assert result['database'] == 'PRODDB'
+            
+        finally:
+            os.unlink(config_file)
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_identity_and_generated_columns(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
+        """Test DB2 identity and generated column detection"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        mock_connection = Mock()
+        
+        # Mock DB2 metadata with identity and generated columns
+        mock_metadata_result = Mock()
+        mock_metadata_result.__iter__ = Mock(return_value=iter([
+            # Table with both identity and generated columns
+            ('SALES', 'TRANSACTIONS', 'TRANS_ID', 'BIGINT', 8, 0, 'N', None, 'Y', 'N', 'SALESSPACE', 10000, 100, 85),  # Identity
+            ('SALES', 'TRANSACTIONS', 'AMOUNT', 'DECIMAL', 10, 2, 'N', None, 'N', 'N', 'SALESSPACE', 10000, 100, 85),
+            ('SALES', 'TRANSACTIONS', 'TAX', 'DECIMAL', 10, 2, 'Y', None, 'N', 'A', 'SALESSPACE', 10000, 100, 85),  # Generated Always
+            ('SALES', 'TRANSACTIONS', 'TOTAL', 'DECIMAL', 10, 2, 'Y', None, 'N', 'D', 'SALESSPACE', 10000, 100, 85),  # Generated Default
+            # Table without special columns
+            ('SALES', 'PRODUCTS', 'PROD_ID', 'INTEGER', 4, 0, 'N', None, 'N', 'N', 'SALESSPACE', 5000, 50, 40),
+            ('SALES', 'PRODUCTS', 'NAME', 'VARCHAR', 200, 0, 'N', None, 'N', 'N', 'SALESSPACE', 5000, 50, 40),
+        ]))
+        
+        def mock_execute(query):
+            query_str = str(query)
+            if 'syscat.tables' in query_str and 'syscat.columns' in query_str:
+                return mock_metadata_result
+            else:
+                # Return empty result for any other query
+                empty_result = Mock()
+                empty_result.__iter__ = Mock(return_value=iter([]))
+                empty_result.fetchone.return_value = None
+                return empty_result
+        
+        mock_connection.execute.side_effect = mock_execute
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Update mock inspector to include the 'transactions' table
+        mock_inspector.get_table_names.return_value = ['customers', 'orders', 'products', 'transactions']
+        
+        # Mock additional column information for the transactions table
+        transactions_columns = [
+            {'name': 'trans_id', 'type': Mock(), 'nullable': False, 'primary_key': True},
+            {'name': 'amount', 'type': Mock(), 'nullable': False, 'primary_key': False},
+            {'name': 'tax', 'type': Mock(), 'nullable': True, 'primary_key': False},
+            {'name': 'total', 'type': Mock(), 'nullable': True, 'primary_key': False}
+        ]
+        
+        def get_columns_side_effect(table_name):
+            if table_name == 'transactions':
+                return transactions_columns
+            else:
+                # Return standard columns for other tables
+                return [
+                    {'name': f'{table_name[:-1]}_id' if table_name.endswith('s') else f'{table_name}_id', 
+                     'type': Mock(), 'nullable': False, 'primary_key': True},
+                    {'name': 'name', 'type': Mock(), 'nullable': False, 'primary_key': False},
+                    {'name': 'email', 'type': Mock(), 'nullable': True, 'primary_key': False}
+                ]
+        
+        mock_inspector.get_columns.side_effect = get_columns_side_effect
+        
+        # Set type string representation for all mock types
+        for table in ['customers', 'orders', 'products', 'transactions']:
+            columns = mock_inspector.get_columns(table)
+            for col in columns:
+                col['type'].__str__ = Mock(return_value='INTEGER' if 'id' in col['name'] else 'VARCHAR(100)')
+        
+        result = get_db2_schema(temp_config_file)
+        
+        # Check identity and generated column detection
+        transactions_table = next(table for table in result['tables'] if table['name'] == 'transactions')
+        products_table = next(table for table in result['tables'] if table['name'] == 'products')
+        
+        assert 'db2_metadata' in transactions_table
+        trans_meta = transactions_table['db2_metadata']
+        assert trans_meta['has_identity_columns'] is True
+        assert trans_meta['has_generated_columns'] is True
+        assert 'identity_columns' in trans_meta
+        assert 'TRANS_ID' in trans_meta['identity_columns']
+        assert 'generated_columns' in trans_meta
+        assert 'TAX' in trans_meta['generated_columns']
+        assert 'TOTAL' in trans_meta['generated_columns']
+        
+        # Products table should not have special columns
+        if 'db2_metadata' in products_table:
+            prod_meta = products_table['db2_metadata']
+            assert prod_meta['has_identity_columns'] is False
+            assert prod_meta['has_generated_columns'] is False
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_tablespaces(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
+        """Test DB2 tablespace information extraction"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        mock_connection = Mock()
+        
+        # Mock empty table metadata
+        mock_empty_result = Mock()
+        mock_empty_result.__iter__ = Mock(return_value=iter([]))
+        
+        # Mock tablespaces query with realistic DB2 tablespace data
+        mock_tablespaces_result = Mock()
+        mock_tablespaces_result.__iter__ = Mock(return_value=iter([
+            ('SYSCATSPACE', 'DMS', 'REGULAR', 4096, 1000, 950, 200),  # System catalog
+            ('USERSPACE1', 'DMS', 'REGULAR', 8192, 5000, 4500, 3000),  # User data
+            ('TEMPSPACE1', 'SMS', 'SYSTEMP', 4096, 2000, 2000, 500),  # Temporary
+            ('IBMDEFAULTBP', 'DMS', 'REGULAR', 4096, 1000, 900, 100),  # Default buffer pool
+        ]))
+        
+        def mock_execute(query):
+            query_str = str(query)
+            if 'syscat.tablespaces' in query_str:
+                return mock_tablespaces_result
+            else:
+                return mock_empty_result
+        
+        mock_connection.execute.side_effect = mock_execute
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        result = get_db2_schema(temp_config_file)
+        
+        # Check tablespace information
+        assert 'tablespaces' in result
+        tablespaces = result['tablespaces']
+        assert len(tablespaces) == 4
+        
+        # Find specific tablespaces
+        userspace1 = next(ts for ts in tablespaces if ts['name'] == 'USERSPACE1')
+        tempspace1 = next(ts for ts in tablespaces if ts['name'] == 'TEMPSPACE1')
+        
+        # Check USERSPACE1 details
+        assert userspace1['type'] == 'DMS'
+        assert userspace1['data_type'] == 'REGULAR'
+        assert userspace1['page_size'] == 8192
+        assert userspace1['total_pages'] == 5000
+        assert userspace1['utilization_percent'] == 66.67  # 3000/4500 * 100
+        
+        # Check TEMPSPACE1 details
+        assert tempspace1['type'] == 'SMS'
+        assert tempspace1['data_type'] == 'SYSTEMP'
+        assert tempspace1['utilization_percent'] == 25.0  # 500/2000 * 100
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_zos_environment(self, mock_inspect, mock_create_engine, mock_sqlalchemy_engine):
+        """Test DB2 z/OS mainframe environment support"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock DB2 metadata query
+        mock_connection = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([]))
+        mock_connection.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Create config for z/OS environment
+        config = {
+            'environment': 'zos',
+            'host': 'mainframe.company.com',
+            'port': 446,
+            'database': 'DB2PROD',
+            'username': 'MAINUSER',
+            'password': 'mainframe_password',
+            'location': 'SYSPLEX1',
+            'current_schema': 'PRODSCHEMA',
+            'protocol': 'TCPIP',
+            'security': 'SSL',
+            'authentication': 'SERVER'
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(config, f)
+            config_file = f.name
+        
+        try:
+            result = get_db2_schema(config_file)
+            
+            # Verify z/OS connection parameters were used
+            call_args = mock_create_engine.call_args
+            connection_string = call_args[0][0]
+            
+            # Check basic connection string structure
+            assert 'ibm_db_sa://' in connection_string
+            assert 'MAINUSER:mainframe_password' in connection_string
+            assert 'mainframe.company.com:446' in connection_string
+            assert 'DB2PROD' in connection_string
+            
+            # Check query parameters (they might be in different order)
+            assert 'protocol=TCPIP' in connection_string
+            assert 'security=SSL' in connection_string  
+            assert 'currentschema=PRODSCHEMA' in connection_string
+            assert 'location=SYSPLEX1' in connection_string
+            
+            assert result['database'] == 'DB2PROD'
+            
+        finally:
+            os.unlink(config_file)
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_db2_schema_version_detection(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
+        """Test DB2 server version detection"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        mock_connection = Mock()
+        
+        # Mock empty metadata
+        mock_empty_result = Mock()
+        mock_empty_result.__iter__ = Mock(return_value=iter([]))
+        
+        # Mock different DB2 versions
+        version_data = [
+            ('DB2 v11.5.0.0', '5'),
+            ('DB2 v11.1.0.0', '3'),
+            ('DB2 v10.5.0.0', '8')
+        ]
+        
+        for service_level, fixpack in version_data:
+            mock_version_result = Mock()
+            mock_version_result.fetchone.return_value = (service_level, fixpack)
+            
+            def mock_execute(query):
+                query_str = str(query)
+                if 'env_get_inst_info' in query_str:
+                    return mock_version_result
+                else:
+                    return mock_empty_result
+            
+            mock_connection.execute.side_effect = mock_execute
+            mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+            mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+            
+            result = get_db2_schema(temp_config_file)
+            
+            # Check version detection
+            assert 'server_version' in result
+            expected_version = f"DB2 {service_level} FixPack {fixpack}"
+            assert result['server_version'] == expected_version
+
+
+# Integration test that includes DB2
+class TestConnectorIntegrationWithDB2:
+    """Integration tests for all connectors including DB2"""
+    
+    def test_all_connectors_with_db2_return_consistent_format(self, temp_config_file, mock_sqlalchemy_engine):
+        """Test that all connectors including DB2 return consistent schema format"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        
+        with patch('schema_graph_builder.connectors.base_connector.create_engine', return_value=mock_engine), \
+             patch('schema_graph_builder.connectors.base_connector.inspect', return_value=mock_inspector):
+            
+            # Mock column types for different databases
+            for table in ['customers', 'orders', 'products']:
+                columns = mock_inspector.get_columns(table)
+                for col in columns:
+                    col['type'] = Mock()
+                    col['type'].__str__ = Mock(return_value='INTEGER' if 'id' in col['name'] else 'VARCHAR(100)')
+            
             # Test all database connectors
             postgres_result = get_postgres_schema(temp_config_file)
             mysql_result = get_mysql_schema(temp_config_file)
             mssql_result = get_mssql_schema(temp_config_file)
             sybase_result = get_sybase_schema(temp_config_file)
+            db2_result = get_db2_schema(temp_config_file)
             
             # All results should have consistent structure
-            for result in [postgres_result, mysql_result, mssql_result, sybase_result]:
+            for result in [postgres_result, mysql_result, mssql_result, sybase_result, db2_result]:
                 assert 'database' in result
                 assert 'tables' in result
                 assert isinstance(result['tables'], list)

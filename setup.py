@@ -21,6 +21,7 @@ requirements = [
     "pyodbc>=4.0.30",
     "cx_Oracle>=8.3.0",
     "pymssql>=2.2.0",  # Used for Sybase/SAP ASE (TDS protocol)
+    "ibm_db>=3.1.0",  # Used for IBM DB2 (Universal Database)
     "PyYAML>=6.0",
     "networkx>=2.8.0",
     "pyvis>=0.3.0",
@@ -70,7 +71,7 @@ setup(
             "examples/*.yaml",
         ],
     },
-    keywords="database schema graph visualization postgresql mysql mssql oracle redshift sybase",
+    keywords="database schema graph visualization postgresql mysql mssql oracle redshift sybase db2",
     project_urls={
         "Bug Reports": "https://github.com/susfungit/schema-graph-builder/issues",
         "Source": "https://github.com/susfungit/schema-graph-builder",

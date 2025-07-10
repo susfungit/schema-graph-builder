@@ -91,6 +91,14 @@ def get_database_config(db_type):
             "html_file": "sybase_schema_graph.html",
             "display_name": "Sybase/SAP ASE",
             "icon": "🗂️"
+        },
+        "db2": {
+            "config_path": "config/db2_db_connections.yaml",
+            "output_config": "output/db2_inferred_relationships.yaml",
+            "output_json": "output/db2_schema_graph.json",
+            "html_file": "db2_schema_graph.html",
+            "display_name": "IBM DB2",
+            "icon": "🔷"
         }
     }
     
@@ -127,8 +135,8 @@ def main():
     
     # Main schema analysis command
     analyze_parser = subparsers.add_parser('analyze', help='Analyze database schema')
-    analyze_parser.add_argument('database', choices=['postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase'], 
-                               help='Database type (postgres, mysql, mssql, oracle, redshift, or sybase)')
+    analyze_parser.add_argument('database', choices=['postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase', 'db2'], 
+                               help='Database type (postgres, mysql, mssql, oracle, redshift, sybase, or db2)')
     analyze_parser.add_argument('--config', type=str, 
                                help='Custom configuration file path')
     analyze_parser.add_argument('--output', type=str, 
@@ -149,7 +157,7 @@ def main():
     # Configuration validation command
     validate_parser = subparsers.add_parser('validate-config', help='Validate configuration file')
     validate_parser.add_argument('config_file', help='Configuration file to validate')
-    validate_parser.add_argument('db_type', choices=['postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase'],
+    validate_parser.add_argument('db_type', choices=['postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase', 'db2'],
                                 help='Database type')
     
     # Default to analyze command for backward compatibility
@@ -158,7 +166,7 @@ def main():
         return
     
     # Handle legacy usage (direct database argument)
-    if len(sys.argv) >= 2 and sys.argv[1] in ['postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase']:
+    if len(sys.argv) >= 2 and sys.argv[1] in ['postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase', 'db2']:
         # Insert 'analyze' command for backward compatibility
         sys.argv.insert(1, 'analyze')
     

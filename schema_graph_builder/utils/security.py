@@ -152,7 +152,7 @@ class ConnectionSecurity:
         Create a secure database connection string with proper validation.
         
         Args:
-            db_type: Database type (postgres, mysql, mssql, oracle, redshift, sybase)
+            db_type: Database type (postgres, mysql, mssql, oracle, redshift, sybase, db2)
             host: Database host
             port: Database port
             database: Database name
@@ -223,6 +223,47 @@ class ConnectionSecurity:
             query_params.append(f"tds_version={tds_version}")
             query_params.append(f"appname={appname}")
             
+            if query_params:
+                conn_str += "?" + "&".join(query_params)
+                
+            return conn_str
+        elif db_type.lower() == 'db2':
+            # IBM DB2 uses ibm_db_sa driver
+            protocol = kwargs.get('protocol', 'TCPIP')
+            security = kwargs.get('security', 'SSL')
+            current_schema = kwargs.get('current_schema')
+            authentication = kwargs.get('authentication', 'SERVER')
+            application_name = kwargs.get('application_name', 'schema-graph-builder')
+            connect_timeout = kwargs.get('connect_timeout', 30)
+            codepage = kwargs.get('codepage')
+            location = kwargs.get('location')
+            
+            # Build connection string with DB2-specific parameters
+            conn_str = f"ibm_db_sa://{username}:{password}@{host}:{port}/{database}"
+            
+            # Add query parameters
+            query_params = []
+            query_params.append(f"protocol={protocol}")
+            query_params.append(f"security={security}")
+            
+            if current_schema:
+                query_params.append(f"currentschema={current_schema}")
+                
+            if authentication:
+                query_params.append(f"authentication={authentication}")
+                
+            if application_name:
+                query_params.append(f"applicationname={application_name}")
+                
+            if connect_timeout:
+                query_params.append(f"connecttimeout={connect_timeout}")
+                
+            if codepage:
+                query_params.append(f"codepage={codepage}")
+                
+            if location:
+                query_params.append(f"location={location}")
+                
             if query_params:
                 conn_str += "?" + "&".join(query_params)
                 
