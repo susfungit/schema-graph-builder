@@ -1735,8 +1735,13 @@ class TestDB2Connector:
             # Check basic connection string structure
             assert 'ibm_db_sa://' in connection_string
             assert 'MAINUSER:mainframe_password' in connection_string
-            assert 'mainframe.company.com:446' in connection_string
-            assert 'DB2PROD' in connection_string
+            
+            # Parse and validate the connection string
+            from urllib.parse import urlparse
+            parsed_url = urlparse(connection_string)
+            assert parsed_url.hostname == 'mainframe.company.com'
+            assert parsed_url.port == 446
+            assert parsed_url.path.strip('/') == 'DB2PROD'
             
             # Check query parameters (they might be in different order)
             assert 'protocol=TCPIP' in connection_string
