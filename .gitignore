@@ -198,6 +198,11 @@ audit.log
 *.audit
 
 # Configuration files with sensitive data
+
+# Documentation files that shouldn't be in version control
+PACKAGING_SUMMARY.md
+DATABASE_CONNECTOR_ABSTRACTION.md
+PRODUCTION_READINESS_REPORT.md
 config.ini
 .env.local
 .env.production
@@ -222,3 +227,4 @@ prod-*.yml
 
 # Project-specific documentation (generated/temporary)
 PRODUCTION_READINESS_REPORT.md
+PACKAGING_SUMMARY.md

@@ -6,19 +6,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen.svg)](tests/)
 
-A powerful Python tool that automatically extracts database schemas, infers relationships between tables, and creates beautiful interactive visualizations. Supports PostgreSQL, MySQL, Microsoft SQL Server, and Oracle Database.
-
-![Schema Graph Example](docs/images/schema-graph-preview.png)
+A powerful Python tool that automatically extracts database schemas, infers relationships between tables, and creates beautiful interactive visualizations. Supports PostgreSQL, MySQL, Microsoft SQL Server, Oracle Database, Amazon Redshift, Sybase/SAP ASE, and IBM DB2.
 
 ## ✨ Features
 
-- 🎯 **Multi-Database Support** - PostgreSQL, MySQL, MS SQL Server, Oracle Database
+- 🎯 **Multi-Database Support** - PostgreSQL, MySQL, MS SQL Server, Oracle, Amazon Redshift, Sybase/SAP ASE, IBM DB2
 - 🔍 **Automatic Relationship Detection** - Infers foreign key relationships using column name patterns
 - 🎨 **Interactive Visualizations** - Beautiful HTML graphs with hover details and zoom
 - 📊 **Multiple Output Formats** - YAML, JSON, HTML
 - 🖥️ **Dual Interface** - Both CLI and Python API
 - ⚡ **Fast & Efficient** - Optimized for large databases
-- 🧪 **Thoroughly Tested** - 99 tests with comprehensive coverage
+- 🧪 **Thoroughly Tested** - 163 tests with comprehensive coverage
 - 📦 **Production Ready** - Professional packaging and distribution
 
 ## 🚀 Quick Start
