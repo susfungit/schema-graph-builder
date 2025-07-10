@@ -152,7 +152,7 @@ class ConnectionSecurity:
         Create a secure database connection string with proper validation.
         
         Args:
-            db_type: Database type (postgres, mysql, mssql, oracle, redshift)
+            db_type: Database type (postgres, mysql, mssql, oracle, redshift, sybase)
             host: Database host
             port: Database port
             database: Database name
@@ -208,6 +208,25 @@ class ConnectionSecurity:
             else:
                 # This should not happen due to validation in oracle_connector.py
                 raise ValueError("Oracle connection requires either 'service_name' or 'sid'")
+        elif db_type.lower() == 'sybase':
+            # Sybase/SAP ASE uses TDS protocol via pymssql
+            charset = kwargs.get('charset', 'utf8')
+            tds_version = kwargs.get('tds_version', '7.0')
+            appname = kwargs.get('appname', 'schema-graph-builder')
+            
+            # Build connection string with Sybase-specific parameters
+            conn_str = f"mssql+pymssql://{username}:{password}@{host}:{port}/{database}"
+            
+            # Add query parameters
+            query_params = []
+            query_params.append(f"charset={charset}")
+            query_params.append(f"tds_version={tds_version}")
+            query_params.append(f"appname={appname}")
+            
+            if query_params:
+                conn_str += "?" + "&".join(query_params)
+                
+            return conn_str
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
     

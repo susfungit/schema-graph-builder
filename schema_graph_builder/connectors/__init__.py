@@ -10,6 +10,7 @@ from .mysql_connector import MySQLConnector, get_mysql_schema
 from .mssql_connector import MSSQLConnector, get_mssql_schema
 from .oracle_connector import OracleConnector, get_oracle_schema
 from .redshift_connector import RedshiftConnector, get_redshift_schema
+from .sybase_connector import SybaseConnector, get_sybase_schema
 
 __all__ = [
     "DatabaseConnector",
@@ -18,9 +19,11 @@ __all__ = [
     "MSSQLConnector",
     "OracleConnector",
     "RedshiftConnector",
+    "SybaseConnector",
     "get_postgres_schema",
     "get_mysql_schema", 
     "get_mssql_schema",
     "get_oracle_schema",
     "get_redshift_schema",
+    "get_sybase_schema",
 ] 

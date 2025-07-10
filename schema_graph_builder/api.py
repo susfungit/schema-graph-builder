@@ -82,7 +82,7 @@ class SchemaGraphBuilder:
         Perform complete schema analysis for a database with security validation.
         
         Args:
-            db_type: Database type ('postgres', 'mysql', 'mssql', 'oracle', 'redshift')
+            db_type: Database type ('postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase')
             config_path: Path to database configuration YAML file
             output_dir: Directory to save output files
             visualize: Whether to create HTML visualization
@@ -237,7 +237,7 @@ class SchemaGraphBuilder:
         Extract only the database schema without relationship inference.
         
         Args:
-            db_type: Database type ('postgres', 'mysql', 'mssql', 'oracle', 'redshift')
+            db_type: Database type ('postgres', 'mysql', 'mssql', 'oracle', 'redshift', 'sybase')
             config_path: Path to database configuration YAML file
             validate_config: Whether to validate configuration before proceeding
             
