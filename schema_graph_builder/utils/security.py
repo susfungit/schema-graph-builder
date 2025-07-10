@@ -152,7 +152,7 @@ class ConnectionSecurity:
         Create a secure database connection string with proper validation.
         
         Args:
-            db_type: Database type (postgres, mysql, mssql)
+            db_type: Database type (postgres, mysql, mssql, oracle, redshift)
             host: Database host
             port: Database port
             database: Database name
@@ -177,8 +177,16 @@ class ConnectionSecurity:
         username = ConnectionSecurity._sanitize_string(username)
         
         # Build connection string based on database type
-        if db_type.lower() in ['postgres', 'postgresql']:
-            return f"postgresql://{username}:{password}@{host}:{port}/{database}"
+        if db_type.lower() in ['postgres', 'postgresql', 'redshift']:
+            # Build base connection string
+            conn_str = f"postgresql://{username}:{password}@{host}:{port}/{database}"
+            
+            # Add SSL mode for Redshift (required) and optional for PostgreSQL
+            if db_type.lower() == 'redshift' or 'sslmode' in kwargs:
+                sslmode = kwargs.get('sslmode', 'require')
+                conn_str += f"?sslmode={sslmode}"
+                
+            return conn_str
         elif db_type.lower() == 'mysql':
             return f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}"
         elif db_type.lower() in ['mssql', 'sqlserver']:

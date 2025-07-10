@@ -1,10 +1,11 @@
 # Production dependencies for Schema Graph Builder
 # Database connectivity
 sqlalchemy>=1.4.0
-psycopg2-binary>=2.9.0
+psycopg2-binary>=2.9.0  # Used for PostgreSQL and Redshift
 pymysql>=1.0.0
 pyodbc>=4.0.30
 cx_Oracle>=8.3.0
+# Optional: redshift-connector>=2.0.0  # Official AWS Redshift driver (alternative to psycopg2)
 
 # Data processing and visualization
 PyYAML>=6.0

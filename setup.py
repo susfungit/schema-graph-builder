@@ -16,7 +16,7 @@ except FileNotFoundError:
 # Define requirements directly
 requirements = [
     "sqlalchemy>=1.4.0",
-    "psycopg2-binary>=2.9.0",
+    "psycopg2-binary>=2.9.0",  # Used for PostgreSQL and Redshift
     "pymysql>=1.0.0",
     "pyodbc>=4.0.30",
     "cx_Oracle>=8.3.0",
@@ -24,6 +24,7 @@ requirements = [
     "networkx>=2.8.0",
     "pyvis>=0.3.0",
     "cryptography>=3.4.0",  # For password encryption
+    # Optional: "redshift-connector>=2.0.0",  # Official AWS Redshift driver
 ]
 
 setup(
@@ -68,7 +69,7 @@ setup(
             "examples/*.yaml",
         ],
     },
-    keywords="database schema graph visualization postgresql mysql mssql oracle",
+    keywords="database schema graph visualization postgresql mysql mssql oracle redshift",
     project_urls={
         "Bug Reports": "https://github.com/susfungit/schema-graph-builder/issues",
         "Source": "https://github.com/susfungit/schema-graph-builder",

@@ -11,6 +11,7 @@ from schema_graph_builder.connectors.postgres_connector import get_postgres_sche
 from schema_graph_builder.connectors.mysql_connector import get_mysql_schema
 from schema_graph_builder.connectors.mssql_connector import get_mssql_schema
 from schema_graph_builder.connectors.oracle_connector import get_oracle_schema
+from schema_graph_builder.connectors.redshift_connector import get_redshift_schema
 
 
 class TestPostgresConnector:
@@ -350,6 +351,169 @@ class TestOracleConnector:
             os.unlink(config_file)
 
 
+class TestRedshiftConnector:
+    """Tests for Amazon Redshift connector"""
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_redshift_schema_success(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
+        """Test successful Redshift schema extraction"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock Redshift-specific metadata query
+        mock_connection = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([
+            ('public', 'customers', 'customer_id', True, 1, 'lzo'),  # distribution key, sort key 1, encoding
+            ('public', 'customers', 'name', False, None, 'text255'),
+            ('public', 'orders', 'order_id', False, 1, 'lzo'),  # sort key 1
+            ('public', 'orders', 'customer_id', False, 2, 'lzo'),  # sort key 2
+        ]))
+        mock_connection.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Mock column types for Redshift
+        for table in ['customers', 'orders', 'products']:
+            columns = mock_inspector.get_columns(table)
+            for col in columns:
+                col['type'] = Mock()
+                col['type'].__str__ = Mock(return_value='INTEGER' if 'id' in col['name'] else 'VARCHAR(256)')
+        
+        result = get_redshift_schema(temp_config_file)
+        
+        assert result['database'] == 'testdb'
+        assert len(result['tables']) == 3
+        assert any(table['name'] == 'customers' for table in result['tables'])
+        
+        # Check Redshift-specific metadata
+        customers_table = next(table for table in result['tables'] if table['name'] == 'customers')
+        assert 'redshift_metadata' in customers_table
+        
+        redshift_meta = customers_table['redshift_metadata']
+        assert redshift_meta['distribution_key'] == 'customer_id'
+        assert len(redshift_meta['sort_keys']) == 1
+        assert redshift_meta['sort_keys'][0]['column'] == 'customer_id'
+        assert redshift_meta['sort_keys'][0]['sort_order'] == 1
+        assert 'customer_id' in redshift_meta['column_encodings']
+        assert redshift_meta['column_encodings']['customer_id'] == 'lzo'
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    def test_get_redshift_schema_connection_error(self, mock_create_engine, temp_config_file):
+        """Test Redshift connection error handling"""
+        mock_create_engine.side_effect = Exception("Redshift connection failed")
+        
+        with pytest.raises(Exception, match="Redshift connection failed"):
+            get_redshift_schema(temp_config_file)
+    
+    def test_get_redshift_schema_invalid_config(self):
+        """Test Redshift with invalid config file"""
+        with pytest.raises(FileNotFoundError):
+            get_redshift_schema("nonexistent_config.yaml")
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_redshift_schema_empty_database(self, mock_inspect, mock_create_engine, temp_config_file):
+        """Test Redshift with empty database"""
+        mock_engine = Mock()
+        mock_inspector = Mock()
+        mock_inspector.get_table_names.return_value = []
+        
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock empty Redshift metadata query
+        mock_connection = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([]))
+        mock_connection.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        result = get_redshift_schema(temp_config_file)
+        
+        assert result['database'] == 'testdb'
+        assert len(result['tables']) == 0
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_redshift_schema_ssl_connection(self, mock_inspect, mock_create_engine, mock_sqlalchemy_engine):
+        """Test Redshift SSL connection requirements"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock Redshift metadata query
+        mock_connection = Mock()
+        mock_result = Mock()
+        mock_result.__iter__ = Mock(return_value=iter([]))
+        mock_connection.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Create config with SSL settings
+        config = {
+            'host': 'my-cluster.abc123.us-east-1.redshift.amazonaws.com',
+            'port': 5439,
+            'database': 'testdb',
+            'username': 'testuser',
+            'password': 'testpass',
+            'ssl_mode': 'require',
+            'region': 'us-east-1'
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            yaml.dump(config, f)
+            config_file = f.name
+        
+        try:
+            result = get_redshift_schema(config_file)
+            
+            # Verify SSL was enforced in connection
+            mock_create_engine.assert_called_once()
+            call_args = mock_create_engine.call_args
+            
+            # Check that SSL mode was set
+            assert 'sslmode=require' in call_args[0][0]  # Connection string
+            
+            assert result['database'] == 'testdb'
+        finally:
+            os.unlink(config_file)
+    
+    @patch('schema_graph_builder.connectors.base_connector.create_engine')
+    @patch('schema_graph_builder.connectors.base_connector.inspect')
+    def test_get_redshift_schema_metadata_query_error(self, mock_inspect, mock_create_engine, temp_config_file, mock_sqlalchemy_engine):
+        """Test Redshift schema extraction with metadata query error"""
+        mock_engine, mock_inspector = mock_sqlalchemy_engine
+        mock_create_engine.return_value = mock_engine
+        mock_inspect.return_value = mock_inspector
+        
+        # Mock metadata query failure
+        mock_connection = Mock()
+        mock_connection.execute.side_effect = Exception("Metadata query failed")
+        mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+        mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+        
+        # Mock column types
+        for table in ['customers', 'orders', 'products']:
+            columns = mock_inspector.get_columns(table)
+            for col in columns:
+                col['type'] = Mock()
+                col['type'].__str__ = Mock(return_value='INTEGER' if 'id' in col['name'] else 'VARCHAR(256)')
+        
+        # Should still return schema but without Redshift metadata
+        result = get_redshift_schema(temp_config_file)
+        
+        assert result['database'] == 'testdb'
+        assert len(result['tables']) == 3
+        
+        # Tables should not have Redshift metadata due to query failure
+        for table in result['tables']:
+            assert 'redshift_metadata' not in table
+
+
 class TestConnectorIntegration:
     """Integration tests for all connectors"""
     
@@ -384,11 +548,35 @@ class TestConnectorIntegration:
                 yaml.dump(oracle_config, f)
                 oracle_config_file = f.name
             
+            # Create Redshift config for testing
+            redshift_config = {
+                'host': 'my-cluster.abc123.us-east-1.redshift.amazonaws.com',
+                'port': 5439,
+                'database': 'testdb',
+                'username': 'testuser',
+                'password': 'testpass',
+                'ssl_mode': 'require'
+            }
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+                yaml.dump(redshift_config, f)
+                redshift_config_file = f.name
+            
             try:
                 oracle_result = get_oracle_schema(oracle_config_file)
                 
+                # Mock Redshift metadata query for integration test
+                mock_connection = Mock()
+                mock_result = Mock()
+                mock_result.__iter__ = Mock(return_value=iter([]))
+                mock_connection.execute.return_value = mock_result
+                mock_engine.connect.return_value.__enter__ = Mock(return_value=mock_connection)
+                mock_engine.connect.return_value.__exit__ = Mock(return_value=None)
+                
+                redshift_result = get_redshift_schema(redshift_config_file)
+                
                 # Check consistent structure
-                for result in [postgres_result, mysql_result, mssql_result, oracle_result]:
+                for result in [postgres_result, mysql_result, mssql_result, oracle_result, redshift_result]:
                     assert 'database' in result
                     assert 'tables' in result
                     assert isinstance(result['tables'], list)
@@ -404,4 +592,5 @@ class TestConnectorIntegration:
                             assert 'nullable' in column
                             assert 'primary_key' in column
             finally:
-                os.unlink(oracle_config_file) 
+                os.unlink(oracle_config_file)
+                os.unlink(redshift_config_file) 
